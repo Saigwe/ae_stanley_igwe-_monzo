@@ -1,0 +1,12 @@
+# Python venv
+dbt-env/
+__pycache__/
+
+# dbt artifacts
+stanley_igwe_ae_monzo/target/
+stanley_igwe_ae_monzo/logs/
+stanley_igwe_ae_monzo/dbt_packages/
+
+# Environment secrets
+.env
+profiles.yml
