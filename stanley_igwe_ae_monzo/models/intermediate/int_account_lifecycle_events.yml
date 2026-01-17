@@ -1,0 +1,21 @@
+version: 2
+
+models:
+  - name: int_account_lifecycle_events
+    description: >
+      Canonical event stream representing the lifecycle of Monzo accounts.
+      Each row corresponds to a lifecycle event (created, closed, reopened),
+      ordered deterministically per account.
+
+    columns:
+      - name: account_id
+        description: Unique account identifier
+
+      - name: event_type
+        description: Type of lifecycle event (created, closed, reopened)
+
+      - name: event_at
+        description: Timestamp when the lifecycle event occurred
+
+      - name: event_sequence
+        description: Deterministic ordering of lifecycle events per account

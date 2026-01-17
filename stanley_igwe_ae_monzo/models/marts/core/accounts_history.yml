@@ -1,0 +1,25 @@
+version: 2
+
+models:
+  - name: accounts_history
+    description: >
+      Historical dimension of Monzo accounts.
+      One row per account per continuous state period,
+      with explicit validity windows.
+
+    columns:
+      - name: account_id
+        tests:
+          - not_null
+
+      - name: account_status
+        tests:
+          - accepted_values:
+              values: ['open', 'closed']
+
+      - name: valid_from
+        tests:
+          - not_null
+
+      - name: is_current
+        description: True if this is the current state of the account

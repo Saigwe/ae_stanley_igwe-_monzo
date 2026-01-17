@@ -1,0 +1,21 @@
+version: 2
+
+models:
+  - name: int_account_state_transitions
+    description: >
+      Slowly changing dimension backbone for Monzo accounts.
+      Each row represents a continuous period where an account
+      was in a given state (open or closed).
+
+    columns:
+      - name: account_id
+        description: Unique account identifier
+
+      - name: account_status
+        description: Account state during the validity period
+
+      - name: valid_from
+        description: Timestamp when the account entered this state
+
+      - name: valid_to
+        description: Timestamp when the account exited this state

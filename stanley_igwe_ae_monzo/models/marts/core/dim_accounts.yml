@@ -1,0 +1,21 @@
+version: 2
+
+models:
+  - name: dim_accounts
+    description: >
+      Current-state snapshot of Monzo accounts.
+      One row per account representing the latest known status.
+
+    columns:
+      - name: account_id
+        tests:
+          - not_null
+          - unique
+
+      - name: account_status
+        tests:
+          - accepted_values:
+              values: ['open', 'closed']
+
+      - name: is_open
+        description: Convenience boolean flag for account status
