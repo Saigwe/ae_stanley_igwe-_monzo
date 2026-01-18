@@ -4,18 +4,63 @@ models:
   - name: int_account_lifecycle_events
     description: >
       Canonical event stream representing the lifecycle of Monzo accounts.
-      Each row corresponds to a lifecycle event (created, closed, reopened),
-      ordered deterministically per account.
+      Each row corresponds to a single lifecycle event (created, closed, reopened),
+      ordered deterministically per account. This model serves as the
+      event-sourced foundation for all downstream account state and history models.
+
+
+    meta:
+      owner: analytics_engineering
+      domain: core_product
+      grain: one row per account per lifecycle event
+      primary_key: [account_id, event_sequence]
+      upstream_dependencies:
+        - stg_account_created
+        - stg_account_closed
+        - stg_account_reopened
+      downstream_use_cases:
+        - account_state_transitions
+        - slowly_changing_dimensions
+        - point_in_time_account_analysis
 
     columns:
       - name: account_id
-        description: Unique account identifier
+        description: Unique identifier for the account.
+        tests:
+          - not_null
+
+      - name: user_id
+        description: >
+          Unique identifier for the user associated with the account.
+          Present only on account creation events and propagated downstream.
+        tests:
+          - not_null:
+              where: "event_type = 'created'"
+
+      - name: account_type
+        description: >
+          Type of account.
+          Defined at creation time and carried forward in downstream models.
 
       - name: event_type
-        description: Type of lifecycle event (created, closed, reopened)
+        description: >
+          Type of lifecycle event. Determines how the account state should
+          transition in downstream models.
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['created', 'closed', 'reopened']
 
       - name: event_at
-        description: Timestamp when the lifecycle event occurred
+        description: Timestamp when the lifecycle event occurred.
+        tests:
+          - not_null
 
       - name: event_sequence
-        description: Deterministic ordering of lifecycle events per account
+        description: >
+          Deterministic ordering of lifecycle events per account,
+          derived from event timestamps. Used to ensure consistent
+          state reconstruction.
+        tests:
+          - not_null
+

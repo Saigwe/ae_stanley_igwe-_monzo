@@ -1,0 +1,9 @@
+# Core dbt
+dbt-bigquery==1.11.0
+
+# SQL linting
+sqlfluff==4.0.0
+sqlfluff-templater-dbt==4.0.0
+
+# Testing
+pytest==9.0.2

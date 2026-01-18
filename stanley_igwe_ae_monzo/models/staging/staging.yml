@@ -1,0 +1,124 @@
+version: 2
+
+models:
+  - name: stg_account_created
+    description: >
+      Cleaned account creation events derived from raw backend logs.
+      Represents the initial creation of an account and serves as the
+      authoritative source for account identity attributes.
+
+    
+    meta:
+      owner: analytics_engineering
+      domain: core_banking
+      grain: one row per account
+      primary_key: account_id
+      upstream_source: monzo_datawarehouse.account_created
+      downstream_use_cases:
+        - account_lifecycle_events
+        - account_dimensions
+
+    columns:
+      - name: account_id
+        description: Hashed account identifier.
+        tests:
+          - not_null
+          - unique
+
+      - name: user_id
+        description: Hashed identifier of the user who owns the account.
+        tests:
+          - not_null
+
+      - name: account_type
+        description: Type of account created (e.g. personal, joint).
+
+      - name: created_at
+        description: Timestamp when the account was created.
+        tests:
+          - not_null
+
+
+  - name: stg_account_closed
+    description: >
+      Account closure events derived from backend logs.
+      Append-only event stream capturing when accounts are closed.
+      Accounts may appear multiple times if reopened and closed again.
+
+    meta:
+      owner: analytics_engineering
+      domain: core_banking
+      grain: one row per account closure event
+      upstream_source: monzo_datawarehouse.account_closed
+      downstream_use_cases:
+        - account_lifecycle_events
+
+    columns:
+      - name: account_id
+        description: Hashed account identifier.
+        tests:
+          - not_null
+
+      - name: closed_at
+        description: Timestamp when the account was closed.
+        tests:
+          - not_null
+
+
+  - name: stg_account_reopened
+    description: >
+      Account reopen events derived from backend logs.
+      Append-only event stream capturing when previously closed
+      accounts were reopened.
+
+    meta:
+      owner: analytics_engineering
+      domain: core_banking
+      grain: one row per account reopen event
+      upstream_source: monzo_datawarehouse.account_reopened
+      downstream_use_cases:
+        - account_lifecycle_events
+
+    columns:
+      - name: account_id
+        description: Hashed account identifier.
+        tests:
+          - not_null
+
+      - name: reopened_at
+        description: Timestamp when the account was reopened.
+        tests:
+          - not_null
+
+
+  - name: stg_account_transactions
+    description: >
+      Daily aggregated transaction counts per account.
+      Represents account-level activity at a daily grain and
+      serves as the foundation for user engagement metrics.
+
+    meta:
+      owner: analytics_engineering
+      domain: payments
+      grain: one row per account per day
+      primary_key: [account_id, activity_date]
+      upstream_source: monzo_datawarehouse.account_transactions
+      downstream_use_cases:
+        - user_daily_activity
+        - engagement_metrics
+
+    columns:
+      - name: account_id
+        description: Hashed account identifier.
+        tests:
+          - not_null
+
+      - name: activity_date
+        description: Calendar date of transaction activity.
+        tests:
+          - not_null
+
+      - name: transactions_num
+        description: Number of transactions performed by the account on that date.
+        tests:
+          - not_null

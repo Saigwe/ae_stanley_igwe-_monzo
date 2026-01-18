@@ -1,0 +1,145 @@
+version: 2
+
+tests:
+
+  - name: account_must_start_open
+    description: >
+      Ensures that every account begins its lifecycle in the 'open' state.
+
+      This test enforces a core lifecycle invariant: an account cannot be
+      closed or reopened before it has first been created and opened.
+      The earliest valid_from timestamp for each account must correspond
+      to an 'open' state.
+
+      Why this matters:
+      - Prevents logically impossible account histories
+      - Ensures lifecycle reconstruction is trustworthy
+      - Protects downstream point-in-time analysis from corrupted timelines
+
+    meta:
+      owner: analytics_platform
+      domain: core_banking
+      severity: error
+      related_models:
+        - dim_accounts_history
+
+  - name: no_overlapping_account_states
+    description: >
+      Validates that account state validity windows do not overlap.
+
+      For each account, validity periods defined by valid_from and valid_to
+      must be strictly sequential and non-overlapping. At no point should
+      an account be simultaneously open and closed.
+
+      Why this matters:
+      - Guarantees correctness of slowly changing dimension logic
+      - Prevents double-counting in point-in-time joins
+      - Ensures eligibility logic is unambiguous
+
+    meta:
+      owner: analytics_platform
+      domain: core_banking
+      severity: error
+      related_models:
+        - dim_accounts_history
+
+  - name: single_current_state_per_account
+    description: >
+      Ensures that each account has at most one current state record.
+
+      This test enforces that only one row per account may be flagged as
+      is_current = true, representing the latest known state.
+
+      Why this matters:
+      - Prevents ambiguous current-state reporting
+      - Protects dimensions used by dashboards and metrics
+      - Ensures dim_accounts can be safely derived
+
+    meta:
+      owner: analytics_platform
+      domain: core_banking
+      severity: error
+      related_models:
+        - dim_accounts_history
+        - dim_accounts
+
+  - name: current_state_validity_consistency
+    description: >
+      Ensures that the row marked as is_current has a null valid_to value.
+
+      If a state is considered current, it must not have an end timestamp.
+      Conversely, any row with a valid_to timestamp must not be marked current.
+
+      Why this matters:
+      - Prevents contradictory state semantics
+      - Enforces a clean SCD Type 2 contract
+      - Simplifies reasoning for downstream consumers
+
+    meta:
+      owner: analytics_platform
+      domain: core_banking
+      severity: error
+      related_models:
+        - dim_accounts_history
+
+  - name: dim_accounts_matches_history
+    description: >
+      Ensures that the current-state dimension (dim_accounts) is fully
+      consistent with the latest state in dim_accounts_history.
+
+      For each account, the account_status and status_updated_at in
+      dim_accounts must exactly match the is_current row in
+      dim_accounts_history.
+
+      Why this matters:
+      - Guarantees a single source of truth
+      - Prevents divergence between current and historical models
+      - Protects reporting and metric denominators
+
+    meta:
+      owner: analytics_engineering
+      domain: core_banking
+      severity: error
+      related_models:
+        - dim_accounts
+        - dim_accounts_history
+
+  - name: active_users_not_greater_than_eligible
+    description: >
+      Ensures that the number of active users does not exceed the number
+      of eligible users on any reporting date.
+
+      This enforces a fundamental metric invariant:
+      active_users ≤ eligible_users.
+
+      Why this matters:
+      - Prevents impossible metric values
+      - Catches join or windowing bugs early
+      - Builds trust in executive-facing KPIs
+
+    meta:
+      owner: product_analytics
+      domain: growth
+      severity: error
+      related_models:
+        - fct_7d_active_users_daily
+
+  - name: active_rate_bounds
+    description: >
+      Ensures that the 7-day active rate is always between 0 and 1.
+
+      Since active_rate_7d is defined as:
+      active_users / eligible_users,
+      the value must always be within valid probability bounds.
+
+      Why this matters:
+      - Protects against divide-by-zero errors
+      - Prevents nonsensical percentages
+      - Ensures metrics are presentation-safe
+
+    meta:
+      owner: product_analytics
+      domain: growth
+      severity: error
+      related_models:
+        - fct_7d_active_users_daily

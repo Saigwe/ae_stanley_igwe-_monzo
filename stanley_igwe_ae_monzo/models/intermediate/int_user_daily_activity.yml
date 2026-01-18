@@ -1,0 +1,46 @@
+version: 2
+
+models:
+  - name: int_user_daily_activity
+    description: >
+      Intermediate model representing daily transaction activity at the user level.
+      Account-level transactions are aggregated to users to form a clean daily
+      activity signal that can be safely used for rolling-window metrics.
+
+
+    meta:
+      owner: analytics_engineering
+      domain: core_product
+      grain: one row per user per day
+      primary_key: [user_id, activity_date]
+      upstream_dependencies:
+        - stg_account_transactions
+        - accounts
+      downstream_use_cases:
+        - rolling activity metrics
+        - engagement analysis
+
+    columns:
+      - name: user_id
+        description: Unique identifier for the user.
+        tests:
+          - not_null
+
+      - name: activity_date
+        description: Date on which the user had transaction activity.
+        tests:
+          - not_null
+
+      - name: transactions_num
+        description: >
+          Total number of transactions performed by the user across all
+          of their accounts on the given day.
+        tests:
+          - not_null
+
+      - name: is_active
+        description: >
+          Boolean flag indicating whether the user performed at least one
+          transaction on the given day.
+        tests:
+          - not_null
