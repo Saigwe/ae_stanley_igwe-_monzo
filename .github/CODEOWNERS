@@ -1,0 +1,56 @@
+# ============================================================
+# CODEOWNERS — dbt Analytics Project
+# All changes to protected areas require review
+# ============================================================
+
+# Default owner for everything
+* @Saigwe
+
+# -------------------------------
+# Core dbt models (most critical)
+# -------------------------------
+models/marts/ @Saigwe
+models/metrics/ @Saigwe
+
+# -------------------------------
+# Intermediate logic (engineering-heavy)
+# -------------------------------
+models/intermediate/ @Saigwe
+
+# -------------------------------
+# Staging models (safer, but still reviewed)
+# -------------------------------
+models/staging/ @Saigwe
+
+# -------------------------------
+# Snapshots (high risk if broken)
+# -------------------------------
+snapshots/ @Saigwe
+
+# -------------------------------
+# Tests (data quality layer)
+# -------------------------------
+tests/ @Saigwe
+
+# -------------------------------
+# Macros (can affect entire project)
+# -------------------------------
+macros/ @Saigwe
+
+# -------------------------------
+# CI/CD and GitHub workflows
+# -------------------------------
+.github/ @Saigwe
+
+# -------------------------------
+# Project-level configuration
+# -------------------------------
+dbt_project.yml @Saigwe
+packages.yml @Saigwe
+profiles.yml @Saigwe
+
+# -------------------------------
+# Documentation & governance
+# -------------------------------
+README.md @Saigwe
+CONTRIBUTING.md @Saigwe
