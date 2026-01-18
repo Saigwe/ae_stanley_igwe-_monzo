@@ -1,0 +1,92 @@
+version: 2
+
+models:
+  - name: fct_7d_active_users_daily
+    tags:
+      - metric
+      - growth
+      - core
+      - critical
+      - ci
+    description: >
+      Purpose:
+      Provides a daily 7-day rolling active user metric for Monzo users.
+      This fact table supports engagement tracking by capturing both the
+      numerator (active users) and denominator (eligible users) in a
+      point-in-time correct and historically reproducible way.
+
+      Grain:
+      One row per reporting date.
+
+      Assumptions:
+      - A user is eligible if they have at least one open account on the
+        reporting date.
+      - A user is considered active if they perform at least one transaction
+        on any day within the 7-day window ending on the reporting date.
+      - Transaction activity is accurately aggregated at the daily level
+        upstream.
+      - Account open/closed status is correctly represented in
+        int_user_open_status_daily.
+
+      Limitations:
+      - This metric does not differentiate between transaction types or values.
+      - Recent dates may be subject to data latency and should be interpreted
+        cautiously.
+      - Rolling windows smooth short-term volatility and may obscure
+        day-specific behavioural changes.
+
+    meta:
+      owner: product_analytics
+      domain: growth
+      grain: one row per reporting date
+      primary_key: activity_date
+      freshness_expectation: updated daily
+      intended_consumers:
+        - product_analytics
+        - growth
+        - leadership_reporting
+      metric_definition:
+        name: 7_day_active_users
+        window: 7 days
+        numerator: active_users
+        denominator: eligible_users
+      deprecation_policy: >
+        This model should only be deprecated once a replacement metric
+        with equivalent point-in-time guarantees and eligibility logic
+        is available.
+      metric_sanity_checks:
+        - active_users_not_greater_than_eligible
+        - active_rate_bounds
+
+    columns:
+      - name: activity_date
+        description: >
+          The reporting date for the metric.
+          The 7-day activity window is evaluated over the range
+          [activity_date - 6, activity_date].
+        tests:
+          - not_null
+          - unique
+
+      - name: eligible_users
+        description: >
+          Count of distinct users who had at least one open account on the
+          reporting date. This value forms the denominator of the metric.
+        tests:
+          - not_null
+
+      - name: active_users
+        description: >
+          Count of distinct eligible users who performed at least one
+          transaction on any day within the 7-day rolling window ending
+          on the reporting date. This value forms the numerator of the metric.
+        tests:
+          - not_null
+
+      - name: active_rate_7d
+        description: >
+          Ratio of active_users to eligible_users.
+          Represents the proportion of users with an open account who were
+          active in the previous 7 days.
+        tests:
+          - not_null

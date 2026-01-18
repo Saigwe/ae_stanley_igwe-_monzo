@@ -2,24 +2,72 @@ version: 2
 
 models:
   - name: dim_accounts_history
+    tags:
+      - core
+      - lifecycle
+      - critical
+      - ci
+      - history
     description: >
-      Historical dimension of Monzo accounts.
-      One row per account per continuous state period,
-      with explicit validity windows.
+      Purpose:
+      Provides a complete historical record of Monzo account states over time.
+      This model enables point-in-time analysis, lifecycle reconstruction, and
+      historical reporting of account status.
+
+      Grain:
+      One row per account per continuous validity period.
+
+      Assumptions:
+      - Account lifecycle events (created, closed, reopened) are accurately
+        captured in the upstream event logs.
+      - Account state transitions occur sequentially and do not overlap.
+      - valid_from and valid_to define contiguous, non-overlapping periods
+        per account.
+
+      Limitations:
+      - This model is rebuilt using full refresh logic and does not preserve
+        previously materialised history.
+      - Late-arriving or corrected events will retroactively change historical
+        records.
+      - This model should not be used for current-state reporting; use
+        dim_accounts instead.
+
+    meta:
+      owner: analytics_platform
+      grain: one row per account per continuous validity period
+      primary_key:
+        - account_id
+        - valid_from
+      intended_use:
+        - point_in_time_analysis
+        - lifecycle_reporting
+      critical_invariants:
+        - account_must_start_open
+        - no_overlapping_account_states
+        - single_current_state_per_account
+        - current_state_validity_consistency
 
     columns:
       - name: account_id
+        description: Unique hashed identifier for the account
         tests:
           - not_null
 
       - name: account_status
+        description: Account state during the validity period
         tests:
           - accepted_values:
               values: ['open', 'closed']
 
       - name: valid_from
+        description: Timestamp when the account entered this state
         tests:
           - not_null
 
+      - name: valid_to
+        description: Timestamp when the account exited this state
+
       - name: is_current
-        description: True if this is the current state of the account
+        description: >
+          Boolean flag indicating whether this row represents the
+          current active state of the account.

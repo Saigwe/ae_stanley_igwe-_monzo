@@ -1,0 +1,40 @@
+version: 2
+
+models:
+  - name: int_user_open_status_daily
+    description: >
+      Intermediate model defining user eligibility by day.
+      A user is considered eligible on a given day if they had at least
+      one open account on that date, based on account validity windows.
+
+
+    meta:
+      owner: analytics_engineering
+      domain: core_product
+      grain: one row per user per day
+      primary_key: [user_id, activity_date]
+      upstream_dependencies:
+        - accounts_history
+      downstream_use_cases:
+        - active user denominators
+        - eligibility filtering for engagement metrics
+      eligibility_invariants:
+        - eligible_user_must_have_open_account
+
+    columns:
+      - name: user_id
+        description: Unique identifier for the user.
+        tests:
+          - not_null
+
+      - name: activity_date
+        description: Date on which the user had at least one open account.
+        tests:
+          - not_null
+
+      - name: has_open_account
+        description: >
+          Boolean flag indicating whether the user had at least one
+          open account on the given day.
+        tests:
+          - not_null

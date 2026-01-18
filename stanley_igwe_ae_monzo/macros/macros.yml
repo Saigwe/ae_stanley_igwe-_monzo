@@ -1,0 +1,102 @@
+version: 2
+
+macros:
+  - name: generate_schema_name
+    description: >
+      Custom schema naming macro used to safely isolate developer environments
+      while preserving stable schemas in non-development environments.
+
+      In development (`target.name == 'dev'`), this macro appends the current
+      developer identifier to the base schema name to prevent collisions
+      between developers working on the same BigQuery project.
+
+      In non-development environments (e.g. staging, prod), schemas resolve
+      deterministically using either the explicitly configured custom schema
+      name or the default target schema.
+
+      This macro is critical for enabling safe parallel development,
+      cost isolation, and CI/CD workflows in multi-developer analytics teams.
+
+    arguments:
+      - name: custom_schema_name
+        type: string
+        description: >
+          Optional schema name explicitly defined in model configuration.
+          If provided, this value is used in non-development environments.
+
+      - name: node
+        type: dict
+        description: >
+          The dbt node object representing the model being built.
+          This argument is provided automatically by dbt and is not
+          intended to be passed manually.
+
+    meta:
+      owner: analytics_platform
+      category: environment_management
+      environments:
+        - dev
+        - staging
+        - prod
+      guarantees:
+        - no_cross_developer_schema_collisions
+        - deterministic_schema_resolution_in_prod
+      operational_notes:
+        - Developer schemas may accumulate over time and should be cleaned up
+          periodically via scheduled BigQuery housekeeping jobs.
+
+
+  - name: assert_not_prod
+    description: >
+      Safety assertion macro that prevents accidental execution of dbt runs
+      against the production environment.
+
+      This macro is typically used as a project-level `pre-hook` to fail fast
+      if a developer attempts to run dbt commands targeting production
+      unintentionally.
+
+      It acts as a guardrail against costly or destructive operations,
+      especially in local development and ad-hoc execution contexts.
+
+    arguments: []
+
+    meta:
+      owner: analytics_platform
+      category: safety_guardrail
+      severity: critical
+      recommended_usage:
+        - project_level_pre_hook
+        - local_development
+      failure_mode:
+        - hard_fail
+      guarantees:
+        - prevents_accidental_prod_writes
+
+  - name: account_status_from_event
+    description: >
+      Convenience macro that standardises account status derivation logic
+      across models.
+
+      This macro encapsulates the mapping between lifecycle event types
+      and their corresponding account states (e.g. open or closed),
+      ensuring consistent logic wherever account status is required.
+
+      Centralising this logic prevents drift between models and makes
+      lifecycle behaviour easier to update and audit.
+
+    arguments:
+      - name: event_type
+        type: string
+        description: >
+          Lifecycle event type value (e.g. 'created', 'closed', 'reopened')
+          used to determine the resulting account status.
+
+    meta:
+      owner: analytics_engineering
+      category: business_logic
+      domain: accounts
+      guarantees:
+        - consistent_account_state_derivation
+      usage_examples:
+        - int_account_state_transitions
+        - dim_accounts_history

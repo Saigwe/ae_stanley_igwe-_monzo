@@ -1,0 +1,112 @@
+version: 2
+
+sources:
+  - name: monzo_datawarehouse
+    description: >
+      Raw backend tables derived from Monzo’s append-only event logs.
+      These tables are fully refreshed nightly and reflect the source
+      of truth emitted by backend systems. No guarantees are made
+      about schema stability or data quality beyond presence.
+
+    meta:
+      owner: backend_platform
+      domain: core_banking
+      refresh_pattern: nightly_full_refresh
+      data_contract: none (append-only event logs)
+
+    config:
+      project: analytics-take-home-test
+      dataset: monzo_datawarehouse
+
+    tables:
+      - name: account_created
+        description: >
+          Account creation events.
+          One row per account representing the moment the account
+          was first created.
+
+        loaded_at_field: created_ts
+
+        freshness:
+          warn_after:
+            count: 1
+            period: day
+
+        columns:
+          - name: account_id_hashed
+            description: Hashed identifier for the account.
+
+          - name: user_id_hashed
+            description: Hashed identifier for the user who owns the account.
+
+          - name: account_type
+            description: Type of account created (e.g. personal, joint).
+
+          - name: created_ts
+            description: Timestamp when the account was created.
+
+
+      - name: account_closed
+        description: >
+          Account closure events.
+          Append-only log of account closure actions.
+          Accounts may appear multiple times if reopened and closed again.
+
+        loaded_at_field: closed_ts
+
+        freshness:
+          warn_after:
+            count: 1
+            period: day
+
+        columns:
+          - name: account_id_hashed
+            description: Hashed identifier for the account.
+
+          - name: closed_ts
+            description: Timestamp when the account was closed.
+
+
+      - name: account_reopened
+        description: >
+          Account reopen events.
+          Append-only log indicating when previously closed
+          accounts were reopened.
+
+        loaded_at_field: reopened_ts
+
+        freshness:
+          warn_after:
+            count: 1
+            period: day
+
+        columns:
+          - name: account_id_hashed
+            description: Hashed identifier for the account.
+
+          - name: reopened_ts
+            description: Timestamp when the account was reopened.
+
+
+      - name: account_transactions
+        description: >
+          Daily aggregated transaction counts per account.
+          Each row represents the total number of transactions
+          performed by an account on a given calendar date.
+
+        loaded_at_field: Date
+
+        freshness:
+          warn_after:
+            count: 1
+            period: day
+
+        columns:
+          - name: account_id_hashed
+            description: Hashed identifier for the account.
+
+          - name: Date
+            description: Calendar date of transaction activity.
+
+          - name: transactions_num
+            description: Number of transactions performed on that date.

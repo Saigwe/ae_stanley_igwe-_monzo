@@ -2,20 +2,81 @@ version: 2
 
 models:
   - name: dim_accounts
+    tags:
+      - core
+      - current_state
+      - critical
+      - ci
+      - reporting  
     description: >
-      Current-state snapshot of Monzo accounts.
-      One row per account representing the latest known status.
+      Purpose:
+      Provides the current-state representation of Monzo accounts.
+      This model is intended for use in reporting, dashboards, and
+      metric denominators where only the latest known account state
+      is required.
+
+      Grain:
+      One row per account.
+
+      Assumptions:
+      - The most recent lifecycle event represents the true current
+        state of the account.
+      - Account lifecycle events are accurately captured upstream.
+      - Account status is limited to 'open' or 'closed'.
+
+      Limitations:
+      - This model does not retain historical account state changes.
+      - It should not be used for point-in-time or retrospective analysis.
+      - For historical or temporal questions, use dim_accounts_history.
+
+    meta:
+      owner: analytics_engineering
+      domain: core_banking
+      grain: one row per account
+      primary_key: account_id
+      source_of_truth: dim_accounts_history
+      refresh_expectation: updated daily
+      deprecation_policy: >
+        This model may be deprecated if consumers migrate to directly
+        querying dim_accounts_history using explicit point-in-time logic.
+      derived_consistency_checks:
+        - dim_accounts_matches_history
 
     columns:
       - name: account_id
+        description: Unique identifier for the account.
         tests:
           - not_null
           - unique
 
-      - name: account_status
+      - name: user_id
+        description: Unique identifier for the user who owns the account.
         tests:
+          - not_null
+
+      - name: account_type
+        description: >
+          Product type of the account.
+
+      - name: account_status
+        description: >
+          Current status of the account derived from the most recent
+          lifecycle event.
+        tests:
+          - not_null
           - accepted_values:
               values: ['open', 'closed']
 
       - name: is_open
-        description: Convenience boolean flag for account status
+        description: >
+          Convenience boolean flag indicating whether the account
+          is currently open. Derived from account_status.
+        tests:
+          - not_null
+
+      - name: status_updated_at
+        description: >
+          Timestamp when the account last transitioned into its
+          current status.
+        tests:
+          - not_null

@@ -30,6 +30,12 @@ clean-targets:         # directories to be removed by `dbt clean`
 # directory as views. These settings can be overridden in the individual model
 # files using the `{{ config(...) }}` macro.
 models:
+
+  +pre-hook: "{{ assert_not_prod() }}"
+
+  #+post-hook:
+    #- "select '{{ this }}' as model, count(*) as row_count from {{ this }}"
+
   stanley_igwe_ae_monzo:
     # Config indicated by + and applies to all files under models/example/
     staging:
@@ -40,3 +46,11 @@ models:
 
     marts:
       +materialized: table
+      +post-hook:
+        - >
+          {% if target.name != 'prod' %}
+          alter table {{ this }}
+          set options (
+            labels=[('owner','analytics'),('env','{{ target.name }}')]
+          )
+          {% endif %}

@@ -3,19 +3,61 @@ version: 2
 models:
   - name: int_account_state_transitions
     description: >
-      Slowly changing dimension backbone for Monzo accounts.
-      Each row represents a continuous period where an account
-      was in a given state (open or closed).
+      Slowly changing dimension (SCD Type 2) backbone for Monzo accounts.
+      Each row represents a continuous period during which an account
+      was in a single state (open or closed), derived deterministically
+      from the account lifecycle event stream.
+
+
+    meta:
+      owner: analytics_engineering
+      domain: core_product
+      grain: one row per account per continuous state period
+      primary_key: [account_id, valid_from]
+      upstream_dependencies:
+        - int_account_lifecycle_events
+      downstream_use_cases:
+        - historical_account_analysis
+        - point_in_time_reporting
+        - accounts_history_dimension
 
     columns:
       - name: account_id
-        description: Unique account identifier
+        description: Unique identifier for the account.
+        tests:
+          - not_null
+
+      - name: user_id
+        description: >
+          Unique identifier for the user who owns the account.
+          Propagated from the account creation event and carried
+          forward across state transitions.
+        tests:
+          - not_null
+
+      - name: account_type
+        description: >
+          Type of account.
+          Defined at account creation and held constant across
+          all subsequent state periods.
 
       - name: account_status
-        description: Account state during the validity period
+        description: >
+          State of the account during the validity period.
+          Indicates whether the account was open or closed.
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['open', 'closed']
 
       - name: valid_from
-        description: Timestamp when the account entered this state
+        description: >
+          Timestamp at which the account entered this state.
+          Marks the start of the validity period.
+        tests:
+          - not_null
 
       - name: valid_to
-        description: Timestamp when the account exited this state
+        description: >
+          Timestamp at which the account exited this state.
+          Null if this row represents the current state.
