@@ -3,9 +3,9 @@ dbt-env/
 __pycache__/
 
 # dbt artifacts
-stanley_igwe_ae_monzo/target/
-stanley_igwe_ae_monzo/logs/
-stanley_igwe_ae_monzo/dbt_packages/
+target/
+logs/
+dbt_packages/
 
 # Environment secrets
 .env
